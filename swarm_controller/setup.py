@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-package_name = 'swarm_controller'
+package_name = 'swarm-controller'
 
 setup(
     name=package_name,
@@ -13,8 +13,8 @@ setup(
     ],
     install_requires=['setuptools'],
     zip_safe=True,
-    maintainer='quanhaoyu',
-    maintainer_email='quanhaoyu@todo.todo',
+    maintainer='eason',
+    maintainer_email='eeeaaason070311@gmail.com',
     description='TODO: Package description',
     license='TODO: License declaration',
     extras_require={
@@ -24,6 +24,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
+            'mocap_republisher = swarm_controller.mocap_republisher:main',
         ],
     },
 )

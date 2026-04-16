@@ -4,7 +4,7 @@
   <name>swarm_controller</name>
   <version>0.0.0</version>
   <description>TODO: Package description</description>
-  <maintainer email="quanhaoyu@todo.todo">quanhaoyu</maintainer>
+  <maintainer email="eeeaaason070311@gmail.com">eason</maintainer>
   <license>TODO: License declaration</license>
 
   <test_depend>ament_copyright</test_depend>
