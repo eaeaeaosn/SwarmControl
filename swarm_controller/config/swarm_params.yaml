@@ -1,0 +1,50 @@
+# swarm_params.yaml
+# =================
+# Parameters for the SwarmBot pipeline.
+#
+# robot_ids      — Optitrack rigid body IDs, in order robot1, robot2, ...
+# arena_half_width — real lab half-size in metres; maps to sim domain ±5.
+#                    Example: 2.5 m means the lab is 5 m × 5 m.
+# max_linear_vel — m/s at full-speed command (v_opt = 1.0).
+#                  ESP32: MaxRPM=33, WheelDiameter=40 mm → v_max ≈ 0.069 m/s
+# max_angular_vel — rad/s at full-turn command (u_opt = 1.0).
+# control_dt     — real-time control-loop period (seconds).
+# goal / waypoint — target positions in *simulation* coordinates (± arena scale).
+# mpc_package_path — absolute path to obstalce_avoidance_mpc_clean directory.
+
+mocap_republisher:
+  ros__parameters:
+    # List of Optitrack rigid body IDs to track.
+    # robot_ids[0] → /robot1, robot_ids[1] → /robot2, ...
+    robot_ids: [13, 14, 15]
+    marker_scale: 0.15         # RViz sphere diameter [m]
+
+swarm_mpc_controller:
+  ros__parameters:
+    # Must match mocap_republisher robot_ids length and order.
+    robot_names: ['robot1', 'robot2', 'robot3']
+
+    # ── Arena / scale ──────────────────────────────────────────────────────
+    arena_half_width: 2.5      # half-width of real lab [m] → maps to sim ±5
+
+    # ── Velocity limits ────────────────────────────────────────────────────
+    max_linear_vel:  0.06      # m/s  (≈ 87 % of 0.069 m/s hardware max)
+    max_angular_vel: 1.0       # rad/s
+
+    # ── Control timing ─────────────────────────────────────────────────────
+    control_dt: 0.1            # real-time loop period [s]  (10 Hz)
+
+    # ── MPC target geometry (sim coords) ───────────────────────────────────
+    goal_x:         3.0        # final target in simulation space
+    goal_y:         3.0
+    waypoint_x:     2.75       # Phase-1 waypoint
+    waypoint_y:    -1.75
+    waypoint_radius: 0.5       # switch to phase-2 when centroid is within this
+
+    # ── MPC solver settings ────────────────────────────────────────────────
+    mpc_package_path: 'c:/Personal_Projects/SwarmBot/obstalce_avoidance_mpc_clean/obstalce_avoidance_mpc_clean'
+    n_mpc:            20       # representative particles in MPC state (3*n_mpc dims)
+    n_horizon:        10       # prediction horizon (steps)
+    mpc_dt:           0.05     # MPC internal timestep [s] — must match sim DT
+    moment_order:     10       # Legendre polynomial order
+    obstacle_penalty: 5000.0   # soft constraint weight
