@@ -11,7 +11,7 @@ setup(
     data_files=[
         # ament resource index marker
         ('share/ament_index/resource_index/packages',
-            ['resource/swarm-controller']),
+            ['resource/' + package_name]),
         # package.xml
         ('share/' + package_name, ['package.xml']),
         # launch files
@@ -36,6 +36,7 @@ setup(
         'console_scripts': [
             'mocap_republisher    = swarm_controller.mocap_republisher:main',
             'swarm_mpc_controller = swarm_controller.swarm_mpc_controller:main',
+            'obstacle_visualizer  = swarm_controller.obstacle_visualizer:main',
         ],
     },
 )

@@ -16,7 +16,7 @@ mocap_republisher:
   ros__parameters:
     # List of Optitrack rigid body IDs to track.
     # robot_ids[0] → /robot1, robot_ids[1] → /robot2, ...
-    robot_ids: [13, 14, 15]
+    robot_ids: [1, 2, 3]
     marker_scale: 0.15         # RViz sphere diameter [m]
 
 swarm_mpc_controller:
@@ -25,7 +25,7 @@ swarm_mpc_controller:
     robot_names: ['robot1', 'robot2', 'robot3']
 
     # ── Arena / scale ──────────────────────────────────────────────────────
-    arena_half_width: 2.5      # half-width of real lab [m] → maps to sim ±5
+    arena_half_width: 1.5      # half-width of real lab [m] → maps to sim ±5
 
     # ── Velocity limits ────────────────────────────────────────────────────
     max_linear_vel:  0.06      # m/s  (≈ 87 % of 0.069 m/s hardware max)
@@ -35,16 +35,23 @@ swarm_mpc_controller:
     control_dt: 0.1            # real-time loop period [s]  (10 Hz)
 
     # ── MPC target geometry (sim coords) ───────────────────────────────────
-    goal_x:         3.0        # final target in simulation space
+    goal_x:         3.0        # final target in simulation space (real 1.5, 1.5 m @ arena_half_width=2.5)
     goal_y:         3.0
-    waypoint_x:     2.75       # Phase-1 waypoint
-    waypoint_y:    -1.75
+    waypoint_x:     3.0        # same as goal — single-target test, no two-phase detour
+    waypoint_y:     3.0
     waypoint_radius: 0.5       # switch to phase-2 when centroid is within this
 
     # ── MPC solver settings ────────────────────────────────────────────────
-    mpc_package_path: 'c:/Personal_Projects/SwarmBot/obstalce_avoidance_mpc_clean/obstalce_avoidance_mpc_clean'
+    mpc_package_path: '/home/eason/Swarm/obstalce_avoidance_mpc_clean'
     n_mpc:            20       # representative particles in MPC state (3*n_mpc dims)
     n_horizon:        10       # prediction horizon (steps)
     mpc_dt:           0.05     # MPC internal timestep [s] — must match sim DT
     moment_order:     10       # Legendre polynomial order
     obstacle_penalty: 5000.0   # soft constraint weight
+
+obstacle_visualizer:
+  ros__parameters:
+    # Must match swarm_mpc_controller's values above.
+    arena_half_width: 1.5
+    goal_x: 3.0
+    goal_y: 3.0

@@ -4,18 +4,20 @@ swarm_full.launch.py
 Launches the complete SwarmBot pipeline:
 
   1. mocap_optitrack_client   — NatNet client → /mocap_rigid_bodies
-  2. mocap_optitrack_w2b      — coordinate-frame transform
-  3. mocap_republisher        — per-robot /robotN/pose + RViz markers
-  4. swarm_mpc_controller     — MPC obstacle-avoidance → /robotN/cmd_vel
+  2. mocap_republisher        — per-robot /robotN/pose + RViz markers
+  3. swarm_mpc_controller     — MPC obstacle-avoidance → /robotN/cmd_vel
+  4. obstacle_visualizer      — static obstacle boxes → /obstacle_markers (RViz)
   5. rviz2                    — visualization (optional, set launch_rviz:=false to skip)
+
+Note: mocap_optitrack_w2b is intentionally not launched here — it transforms
+a single rigid body into a robot-base frame (one hardcoded base_id), which
+doesn't fit the multi-robot swarm case. mocap_republisher reads raw poses
+directly from /mocap_rigid_bodies instead.
 
 Usage
 -----
-  # Standard (Y-up Motive):
+  # Standard:
   ros2 launch swarm_controller swarm_full.launch.py
-
-  # Z-up Motive:
-  ros2 launch swarm_controller swarm_full.launch.py axis:=z_up
 
   # Skip RViz:
   ros2 launch swarm_controller swarm_full.launch.py launch_rviz:=false
@@ -39,10 +41,6 @@ def generate_launch_description():
 
     # ── Launch arguments ──────────────────────────────────────────────────
     ld.add_action(DeclareLaunchArgument(
-        'axis', default_value='y_up',
-        description='Motive Up Axis setting: y_up | z_up'))
-
-    ld.add_action(DeclareLaunchArgument(
         'log_level', default_value='warn',
         description='ROS log level for all nodes'))
 
@@ -50,13 +48,11 @@ def generate_launch_description():
         'launch_rviz', default_value='true',
         description='Set to false to skip RViz2'))
 
-    axis       = LaunchConfiguration('axis')
     log_level  = LaunchConfiguration('log_level')
     launch_rviz = LaunchConfiguration('launch_rviz')
 
     # ── Package share directories ─────────────────────────────────────────
     mocap_client_share  = get_package_share_directory('mocap_optitrack_client')
-    mocap_w2b_share     = get_package_share_directory('mocap_optitrack_w2b')
     swarm_share         = get_package_share_directory('swarm_controller')
 
     # ── swarm_controller shared parameter file ────────────────────────────
@@ -72,38 +68,7 @@ def generate_launch_description():
         arguments  = ['--ros-args', '--log-level', log_level],
     )
 
-    # ── 2. World-to-base transform ─────────────────────────────────────────
-    # Choose config based on the Motive Up Axis setting.
-    # We compute both paths and pick at launch time via a substitution.
-    w2b_config_y = os.path.join(mocap_w2b_share, 'config', 'world_to_base_y_up.yaml')
-    w2b_config_z = os.path.join(mocap_w2b_share, 'config', 'world_to_base_z_up.yaml')
-
-    # Use y_up config by default; for z_up pass axis:=z_up.
-    # (Launch substitution-based conditional config selection)
-    from launch.substitutions import PythonExpression   # noqa: PLC0415
-    from launch.substitutions import EqualsSubstitution  # noqa: PLC0415
-
-    world_to_base_y = Node(
-        package    = 'mocap_optitrack_w2b',
-        executable = 'mocap_optitrack_w2b',
-        name       = 'world_to_base',
-        parameters = [w2b_config_y],
-        arguments  = ['--ros-args', '--log-level', log_level],
-        condition  = IfCondition(
-            PythonExpression(["'", LaunchConfiguration('axis'), "' == 'y_up'"])),
-    )
-
-    world_to_base_z = Node(
-        package    = 'mocap_optitrack_w2b',
-        executable = 'mocap_optitrack_w2b',
-        name       = 'world_to_base',
-        parameters = [w2b_config_z],
-        arguments  = ['--ros-args', '--log-level', log_level],
-        condition  = IfCondition(
-            PythonExpression(["'", LaunchConfiguration('axis'), "' == 'z_up'"])),
-    )
-
-    # ── 3. Mocap republisher ──────────────────────────────────────────────
+    # ── 2. Mocap republisher ──────────────────────────────────────────────
     mocap_republisher = Node(
         package    = 'swarm_controller',
         executable = 'mocap_republisher',
@@ -112,11 +77,20 @@ def generate_launch_description():
         arguments  = ['--ros-args', '--log-level', log_level],
     )
 
-    # ── 4. Swarm MPC controller ───────────────────────────────────────────
+    # ── 3. Swarm MPC controller ───────────────────────────────────────────
     swarm_mpc = Node(
         package    = 'swarm_controller',
         executable = 'swarm_mpc_controller',
         name       = 'swarm_mpc_controller',
+        parameters = [swarm_params],
+        arguments  = ['--ros-args', '--log-level', log_level],
+    )
+
+    # ── 4. Obstacle visualizer ──────────────────────────────────────────────
+    obstacle_visualizer = Node(
+        package    = 'swarm_controller',
+        executable = 'obstacle_visualizer',
+        name       = 'obstacle_visualizer',
         parameters = [swarm_params],
         arguments  = ['--ros-args', '--log-level', log_level],
     )
@@ -134,10 +108,9 @@ def generate_launch_description():
 
     # ── Assemble ──────────────────────────────────────────────────────────
     ld.add_action(natnet_client)
-    ld.add_action(world_to_base_y)
-    ld.add_action(world_to_base_z)
     ld.add_action(mocap_republisher)
     ld.add_action(swarm_mpc)
+    ld.add_action(obstacle_visualizer)
     ld.add_action(rviz_node)
 
     return ld

@@ -51,6 +51,7 @@ import numpy as np
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import PoseStamped, Twist
+from nav_msgs.msg import Path
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -98,7 +99,7 @@ class SwarmMPCController(Node):
         self.declare_parameter('waypoint_radius',   0.5)
         self.declare_parameter(
             'mpc_package_path',
-            r'c:\Personal_Projects\SwarmBot\obstalce_avoidance_mpc_clean\obstalce_avoidance_mpc_clean')
+            '/home/eason/Swarm/obstalce_avoidance_mpc_clean')
         self.declare_parameter('n_mpc',             20)
         self.declare_parameter('n_horizon',         10)
         self.declare_parameter('mpc_dt',            0.05)
@@ -148,6 +149,18 @@ class SwarmMPCController(Node):
             name: self.create_publisher(Twist, f'/{name}/cmd_vel', 10)
             for name in robot_names
         }
+
+        # ── Trajectory visualisation: actual (mocap) vs. MPC-predicted ─────
+        self._actual_path_pubs = {
+            name: self.create_publisher(Path, f'/{name}/path_actual', 10)
+            for name in robot_names
+        }
+        self._predicted_path_pubs = {
+            name: self.create_publisher(Path, f'/{name}/path_predicted', 10)
+            for name in robot_names
+        }
+        self._actual_paths: dict[str, list] = {name: [] for name in robot_names}
+        self._ACTUAL_PATH_MAX_LEN = 1000   # ~100s of trail at 10Hz control_dt
 
         # ── MPC state ─────────────────────────────────────────────────────
         self._mpc          = None   # do-mpc controller (phase 1 or 2)
@@ -240,6 +253,27 @@ class SwarmMPCController(Node):
         scale = 5.0 / self._arena_hw
         return x_real * scale, y_real * scale
 
+    def _to_real(self, x_sim: float, y_sim: float) -> tuple[float, float]:
+        """Convert simulation coordinates ∈ [-5, 5] back to real-world metres."""
+        scale = self._arena_hw / 5.0
+        return x_sim * scale, y_sim * scale
+
+    @staticmethod
+    def _make_path_msg(stamp, points: list) -> Path:
+        """Build a nav_msgs/Path (frame 'world') from a list of (x, y) real-world points."""
+        path_msg = Path()
+        path_msg.header.stamp = stamp
+        path_msg.header.frame_id = 'world'
+        for x, y in points:
+            pose = PoseStamped()
+            pose.header.stamp = stamp
+            pose.header.frame_id = 'world'
+            pose.pose.position.x = float(x)
+            pose.pose.position.y = float(y)
+            pose.pose.orientation.w = 1.0
+            path_msg.poses.append(pose)
+        return path_msg
+
     # ── ROS callbacks ─────────────────────────────────────────────────────
 
     def _pose_cb(self, msg: PoseStamped, robot_name: str):
@@ -260,7 +294,8 @@ class SwarmMPCController(Node):
         with self._lock:
             poses = {k: v for k, v in self._poses.items()}
 
-        valid = [(x, y, t) for (x, y, t) in poses.values() if t is not None]
+        valid_names = [name for name, v in poses.items() if v is not None]
+        valid = [poses[name] for name in valid_names]
         if not valid:
             self.get_logger().warn('No robot poses received yet — skipping MPC step',
                                    throttle_duration_sec=5.0)
@@ -269,6 +304,15 @@ class SwarmMPCController(Node):
         xs     = np.array([p[0] for p in valid])
         ys     = np.array([p[1] for p in valid])
         thetas = np.array([p[2] for p in valid])
+
+        # ── Actual-trajectory trail (ground truth from mocap) ──────────────
+        now = self.get_clock().now().to_msg()
+        for name, x_sim, y_sim in zip(valid_names, xs, ys):
+            buf = self._actual_paths[name]
+            buf.append(self._to_real(x_sim, y_sim))
+            if len(buf) > self._ACTUAL_PATH_MAX_LEN:
+                del buf[0]
+            self._actual_path_pubs[name].publish(self._make_path_msg(now, buf))
 
         # ── Phase switch check ────────────────────────────────────────────
         cx, cy = xs.mean(), ys.mean()
@@ -288,12 +332,33 @@ class SwarmMPCController(Node):
                                        f'{self._goal_sim})')
 
         # ── Pack state & solve MPC ────────────────────────────────────────
+        # particle_idx[i] = which real robot (index into valid_names) representative
+        # particle slot i was sampled from — reused below to attribute the MPC's
+        # predicted trajectory back to individual robots.
+        particle_idx = np.linspace(0, len(xs) - 1, self._n_mpc, dtype=int)
         x0 = _pack_state(xs, ys, thetas, self._n_mpc)
         try:
             u_opt = self._mpc.make_step(x0)
         except Exception as exc:
             self.get_logger().error(f'MPC solver error: {exc}', throttle_duration_sec=2.0)
             return
+
+        # ── Predicted-trajectory publish (MPC's own horizon prediction) ────
+        # Best-effort: a failure here must never break the actual control loop.
+        try:
+            x_pred = self._mpc.data.prediction(('_x', 'x_pos'))[:, :, 0]  # (n_mpc, horizon+1)
+            y_pred = self._mpc.data.prediction(('_x', 'y_pos'))[:, :, 0]
+            for r, name in enumerate(valid_names):
+                slots = np.where(particle_idx == r)[0]
+                if slots.size == 0:
+                    continue
+                slot = slots[0]
+                points = [self._to_real(px, py)
+                          for px, py in zip(x_pred[slot], y_pred[slot])]
+                self._predicted_path_pubs[name].publish(self._make_path_msg(now, points))
+        except Exception as exc:
+            self.get_logger().warn(f'Predicted-path publish failed: {exc}',
+                                   throttle_duration_sec=5.0)
 
         u_val = float(u_opt[0, 0])   # turn-rate  ∈ [-1, 1]
         v_val = float(u_opt[1, 0])   # speed      ∈ [-1, 1]

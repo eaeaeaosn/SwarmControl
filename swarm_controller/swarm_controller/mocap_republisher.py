@@ -83,6 +83,8 @@ class MocapRepublisher(Node):
             info = self._robots.get(rb.id)
             if info is None:
                 continue  # not a robot we care about
+            if not rb.valid:
+                continue  # asset defined in Motive but not currently tracked
 
             pose = PoseStamped()
             pose.header.stamp = now
