@@ -37,6 +37,8 @@ setup(
             'mocap_republisher    = swarm_controller.mocap_republisher:main',
             'swarm_mpc_controller = swarm_controller.swarm_mpc_controller:main',
             'obstacle_visualizer  = swarm_controller.obstacle_visualizer:main',
+            'circle_to_ellipse_controller = swarm_controller.circle_to_ellipse_controller:main',
+            'ellipse_visualizer   = swarm_controller.ellipse_visualizer:main',
         ],
     },
 )

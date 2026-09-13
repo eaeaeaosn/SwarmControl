@@ -5,9 +5,17 @@ Launches the complete SwarmBot pipeline:
 
   1. mocap_optitrack_client   — NatNet client → /mocap_rigid_bodies
   2. mocap_republisher        — per-robot /robotN/pose + RViz markers
-  3. swarm_mpc_controller     — MPC obstacle-avoidance → /robotN/cmd_vel
-  4. obstacle_visualizer      — static obstacle boxes → /obstacle_markers (RViz)
-  5. rviz2                    — visualization (optional, set launch_rviz:=false to skip)
+  3. controller + visualizer  — selected by the `experiment` launch arg:
+       experiment:=circle_to_ellipse (default) — 5-robot RL circle→ellipse
+         circle_to_ellipse_controller → per-robot /robotN/cmd_vel
+         ellipse_visualizer           → /ellipse_markers (RViz)
+       experiment:=mpc — original Dubins obstacle-avoidance MPC
+         swarm_mpc_controller  → broadcast /robotN/cmd_vel
+         obstacle_visualizer   → /obstacle_markers (RViz)
+  4. rviz2                    — visualization (optional, set launch_rviz:=false to skip)
+
+See CIRCLE_TO_ELLIPSE_EXPERIMENT.md for the full real-world run procedure
+for the circle_to_ellipse experiment.
 
 Note: mocap_optitrack_w2b is intentionally not launched here — it transforms
 a single rigid body into a robot-base frame (one hardcoded base_id), which
@@ -16,8 +24,11 @@ directly from /mocap_rigid_bodies instead.
 
 Usage
 -----
-  # Standard:
+  # Standard (circle-to-ellipse RL experiment):
   ros2 launch swarm_controller swarm_full.launch.py
+
+  # Original MPC obstacle-avoidance experiment:
+  ros2 launch swarm_controller swarm_full.launch.py experiment:=mpc
 
   # Skip RViz:
   ros2 launch swarm_controller swarm_full.launch.py launch_rviz:=false
@@ -31,7 +42,7 @@ import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
-from launch.conditions import IfCondition
+from launch.conditions import IfCondition, LaunchConfigurationEquals
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
@@ -48,8 +59,15 @@ def generate_launch_description():
         'launch_rviz', default_value='true',
         description='Set to false to skip RViz2'))
 
+    ld.add_action(DeclareLaunchArgument(
+        'experiment', default_value='circle_to_ellipse',
+        description="'circle_to_ellipse' (5-robot RL policy, default) or "
+                    "'mpc' (original Dubins obstacle-avoidance MPC)"))
+
     log_level  = LaunchConfiguration('log_level')
     launch_rviz = LaunchConfiguration('launch_rviz')
+    is_mpc              = LaunchConfigurationEquals('experiment', 'mpc')
+    is_circle_to_ellipse = LaunchConfigurationEquals('experiment', 'circle_to_ellipse')
 
     # ── Package share directories ─────────────────────────────────────────
     mocap_client_share  = get_package_share_directory('mocap_optitrack_client')
@@ -77,22 +95,44 @@ def generate_launch_description():
         arguments  = ['--ros-args', '--log-level', log_level],
     )
 
-    # ── 3. Swarm MPC controller ───────────────────────────────────────────
+    # ── 3a. Swarm MPC controller (experiment:=mpc) ────────────────────────
     swarm_mpc = Node(
         package    = 'swarm_controller',
         executable = 'swarm_mpc_controller',
         name       = 'swarm_mpc_controller',
         parameters = [swarm_params],
         arguments  = ['--ros-args', '--log-level', log_level],
+        condition  = is_mpc,
     )
 
-    # ── 4. Obstacle visualizer ──────────────────────────────────────────────
+    # ── 3b. Circle-to-ellipse RL controller (experiment:=circle_to_ellipse) ─
+    circle_to_ellipse_controller = Node(
+        package    = 'swarm_controller',
+        executable = 'circle_to_ellipse_controller',
+        name       = 'circle_to_ellipse_controller',
+        parameters = [swarm_params],
+        arguments  = ['--ros-args', '--log-level', log_level],
+        condition  = is_circle_to_ellipse,
+    )
+
+    # ── 4a. Obstacle visualizer (experiment:=mpc) ──────────────────────────
     obstacle_visualizer = Node(
         package    = 'swarm_controller',
         executable = 'obstacle_visualizer',
         name       = 'obstacle_visualizer',
         parameters = [swarm_params],
         arguments  = ['--ros-args', '--log-level', log_level],
+        condition  = is_mpc,
+    )
+
+    # ── 4b. Ellipse visualizer (experiment:=circle_to_ellipse) ─────────────
+    ellipse_visualizer = Node(
+        package    = 'swarm_controller',
+        executable = 'ellipse_visualizer',
+        name       = 'ellipse_visualizer',
+        parameters = [swarm_params],
+        arguments  = ['--ros-args', '--log-level', log_level],
+        condition  = is_circle_to_ellipse,
     )
 
     # ── 5. RViz2 (optional) ───────────────────────────────────────────────
@@ -110,7 +150,9 @@ def generate_launch_description():
     ld.add_action(natnet_client)
     ld.add_action(mocap_republisher)
     ld.add_action(swarm_mpc)
+    ld.add_action(circle_to_ellipse_controller)
     ld.add_action(obstacle_visualizer)
+    ld.add_action(ellipse_visualizer)
     ld.add_action(rviz_node)
 
     return ld

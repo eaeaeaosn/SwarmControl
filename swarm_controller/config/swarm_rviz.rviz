@@ -112,6 +112,45 @@ Visualization Manager:
         {}
       Queue Size: 100
       Value: true
+    - Class: rviz_default_plugins/Marker
+      Enabled: true
+      Marker Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /robot4/marker
+      Name: robot4
+      Namespaces:
+        {}
+      Queue Size: 100
+      Value: true
+    - Class: rviz_default_plugins/Marker
+      Enabled: true
+      Marker Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /robot5/marker
+      Name: robot5
+      Namespaces:
+        {}
+      Queue Size: 100
+      Value: true
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: true
+      Marker Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /ellipse_markers
+      Name: ellipse
+      Namespaces:
+        {}
+      Queue Size: 100
+      Value: true
     - Alpha: 1
       Buffer Length: 1
       Class: rviz_default_plugins/Path
@@ -147,7 +186,7 @@ Visualization Manager:
     - Alpha: 1
       Buffer Length: 1
       Class: rviz_default_plugins/Path
-      Color: 0; 255; 0
+      Color: 255; 69; 0
       Enabled: true
       Line Style: Lines
       Line Width: 0.02
@@ -163,7 +202,7 @@ Visualization Manager:
     - Alpha: 0.6
       Buffer Length: 1
       Class: rviz_default_plugins/Path
-      Color: 190; 255; 190
+      Color: 255; 190; 150
       Enabled: true
       Line Style: Lines
       Line Width: 0.015
@@ -179,7 +218,7 @@ Visualization Manager:
     - Alpha: 1
       Buffer Length: 1
       Class: rviz_default_plugins/Path
-      Color: 0; 51; 255
+      Color: 255; 255; 0
       Enabled: true
       Line Style: Lines
       Line Width: 0.02
@@ -195,7 +234,7 @@ Visualization Manager:
     - Alpha: 0.6
       Buffer Length: 1
       Class: rviz_default_plugins/Path
-      Color: 190; 210; 255
+      Color: 255; 255; 190
       Enabled: true
       Line Style: Lines
       Line Width: 0.015
@@ -207,6 +246,38 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /robot3/path_predicted
+      Value: true
+    - Alpha: 1
+      Buffer Length: 1
+      Class: rviz_default_plugins/Path
+      Color: 0; 255; 0
+      Enabled: true
+      Line Style: Lines
+      Line Width: 0.02
+      Name: robot4_actual
+      Pose Style: None
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /robot4/path_actual
+      Value: true
+    - Alpha: 1
+      Buffer Length: 1
+      Class: rviz_default_plugins/Path
+      Color: 0; 255; 255
+      Enabled: true
+      Line Style: Lines
+      Line Width: 0.02
+      Name: robot5_actual
+      Pose Style: None
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /robot5/path_actual
       Value: true
   Enabled: true
   Global Options:

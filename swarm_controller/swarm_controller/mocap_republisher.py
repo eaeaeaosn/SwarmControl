@@ -23,16 +23,19 @@ from mocap_optitrack_interfaces.msg import RigidBodyArray
 from geometry_msgs.msg import PoseStamped
 from visualization_msgs.msg import Marker
 
-# Distinct colors for up to 8 robots (R, G, B in 0.0–1.0)
+# Distinct colors for up to 8 robots (R, G, B in 0.0–1.0).
+# robot1..5 match the physical LED_R/LED_G/LED_B colors in
+# SwarmBotCode/include/config.h, so the RViz sphere/path for a robot matches
+# what you see on the actual hardware.
 _ROBOT_COLORS = [
-    (1.0, 0.0, 0.0),   # robot1  red
-    (0.0, 1.0, 0.0),   # robot2  green
-    (0.0, 0.2, 1.0),   # robot3  blue
-    (1.0, 0.8, 0.0),   # robot4  yellow
-    (1.0, 0.0, 1.0),   # robot5  magenta
-    (0.0, 1.0, 1.0),   # robot6  cyan
-    (1.0, 0.5, 0.0),   # robot7  orange
-    (0.5, 0.0, 1.0),   # robot8  purple
+    (1.0, 0.0, 0.0),     # robot1  red
+    (1.0, 0.27, 0.0),    # robot2  orange
+    (1.0, 1.0, 0.0),     # robot3  yellow
+    (0.0, 1.0, 0.0),     # robot4  green
+    (0.0, 1.0, 1.0),     # robot5  cyan
+    (1.0, 0.0, 1.0),     # robot6  magenta
+    (0.5, 0.0, 1.0),     # robot7  purple
+    (0.0, 0.2, 1.0),     # robot8  blue
 ]
 
 

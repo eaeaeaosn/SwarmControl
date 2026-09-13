@@ -11,13 +11,47 @@
 # control_dt     — real-time control-loop period (seconds).
 # goal / waypoint — target positions in *simulation* coordinates (± arena scale).
 # mpc_package_path — absolute path to obstalce_avoidance_mpc_clean directory.
+#
+# circle_to_ellipse_controller / ellipse_visualizer — see
+# ../CIRCLE_TO_ELLIPSE_EXPERIMENT.md for the full real-world run procedure.
+# Selected via `experiment:=circle_to_ellipse` (the launch file's default).
 
 mocap_republisher:
   ros__parameters:
-    # List of Optitrack rigid body IDs to track.
-    # robot_ids[0] → /robot1, robot_ids[1] → /robot2, ...
-    robot_ids: [1, 2, 3]
+    # List of Optitrack rigid body IDs to track, in order robot1, robot2, ...
+    # ⚠ PLACEHOLDER IDs — replace with the real Motive rigid-body asset IDs
+    # for whichever 5 physical robots you're using, in the order that must
+    # match the LED-color → table mapping documented in
+    # CIRCLE_TO_ELLIPSE_EXPERIMENT.md (config.h: robot1=red, robot2=orange,
+    # robot3=yellow, robot4=green, robot5=cyan).
+    robot_ids: [1, 2, 3, 4, 5]
     marker_scale: 0.15         # RViz sphere diameter [m]
+
+circle_to_ellipse_controller:
+  ros__parameters:
+    # Order matters: column i of the policy's state matrix is robot_names[i],
+    # and must match target_ellipse.json's robot_setup[i].robot_id (1..5).
+    robot_names: ['robot1', 'robot2', 'robot3', 'robot4', 'robot5']
+    controller_package_path: '/home/eason/Swarm/circle_to_ellipse_controller'
+    # The policy runs as a subprocess in controller_package_path/.venv (its
+    # selected_model.zip needs numpy>=2, which conflicts with this machine's
+    # system ROS/OpenCV stack in one interpreter) — create that venv first,
+    # see CIRCLE_TO_ELLIPSE_EXPERIMENT.md. venv_python: '' means
+    # <controller_package_path>/.venv/bin/python.
+    venv_python: ''
+    control_dt: 0.2            # policy decision period [s] (per package README)
+    beta_dt: 0.05              # beta re-evaluation / cmd_vel period [s]
+    max_speed_mps: 0.05        # per-robot |[vx,vy]| clip (package README)
+    episode_decisions: 805     # must match controller.py's EPISODE_DECISIONS
+    subprocess_timeout_s: 1.0  # max wait for one policy response
+    arena_half_width: 1.0      # fixed 2 m x 2 m workspace — sanity-check only
+    autostart: false           # require the ~/start service before moving
+
+ellipse_visualizer:
+  ros__parameters:
+    controller_package_path: '/home/eason/Swarm/circle_to_ellipse_controller'
+    initial_circle_center: [-0.5, -0.5]
+    initial_circle_radius: 0.169706
 
 swarm_mpc_controller:
   ros__parameters:
