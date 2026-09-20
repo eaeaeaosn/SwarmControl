@@ -32,24 +32,27 @@ circle_to_ellipse_controller:
     # Order matters: column i of the policy's state matrix is robot_names[i],
     # and must match target_ellipse.json's robot_setup[i].robot_id (1..5).
     robot_names: ['robot1', 'robot2', 'robot3', 'robot4', 'robot5']
-    controller_package_path: '/home/eason/Swarm/circle_to_ellipse_controller'
+    controller_package_path: '/home/eason/Swarm/circle_to_ellipse_controller(1)/circle_to_ellipse_controller'
     # The policy runs as a subprocess in controller_package_path/.venv (its
     # selected_model.zip needs numpy>=2, which conflicts with this machine's
     # system ROS/OpenCV stack in one interpreter) — create that venv first,
     # see CIRCLE_TO_ELLIPSE_EXPERIMENT.md. venv_python: '' means
     # <controller_package_path>/.venv/bin/python.
-    venv_python: ''
+    # Retrained model (2026-09-13, speed004_retraining) has no .venv of its
+    # own yet; requirements.txt is identical to the original package, so we
+    # reuse the original venv here instead of building a duplicate one.
+    venv_python: '/home/eason/Swarm/circle_to_ellipse_controller/.venv/bin/python'
     control_dt: 0.2            # policy decision period [s] (per package README)
     beta_dt: 0.05              # beta re-evaluation / cmd_vel period [s]
-    max_speed_mps: 0.05        # per-robot |[vx,vy]| clip (package README)
-    episode_decisions: 805     # must match controller.py's EPISODE_DECISIONS
+    max_speed_mps: 0.04        # per-robot |[vx,vy]| clip — must match new checkpoint's MAX_FORWARD_M_S
+    episode_decisions: 1005    # must match controller.py's EPISODE_DECISIONS (retrained: 1005 = 201 s)
     subprocess_timeout_s: 1.0  # max wait for one policy response
     arena_half_width: 1.0      # fixed 2 m x 2 m workspace — sanity-check only
     autostart: false           # require the ~/start service before moving
 
 ellipse_visualizer:
   ros__parameters:
-    controller_package_path: '/home/eason/Swarm/circle_to_ellipse_controller'
+    controller_package_path: '/home/eason/Swarm/circle_to_ellipse_controller(1)/circle_to_ellipse_controller'
     initial_circle_center: [-0.5, -0.5]
     initial_circle_radius: 0.169706
 
