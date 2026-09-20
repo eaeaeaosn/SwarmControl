@@ -15,6 +15,10 @@
 # circle_to_ellipse_controller / ellipse_visualizer — see
 # ../CIRCLE_TO_ELLIPSE_EXPERIMENT.md for the full real-world run procedure.
 # Selected via `experiment:=circle_to_ellipse` (the launch file's default).
+#
+# gaussian_cluster_transfer_controller / gaussian_visualizer — see
+# ../GAUSSIAN_CLUSTER_TRANSFER_EXPERIMENT.md for the full real-world run
+# procedure. Selected via `experiment:=gaussian_cluster_transfer`.
 
 mocap_republisher:
   ros__parameters:
@@ -52,6 +56,34 @@ ellipse_visualizer:
     controller_package_path: '/home/eason/Swarm/circle_to_ellipse_controller'
     initial_circle_center: [-0.5, -0.5]
     initial_circle_radius: 0.169706
+
+gaussian_cluster_transfer_controller:
+  ros__parameters:
+    # Order matters: column i of the policy's state matrix is robot_names[i],
+    # and must match target_gaussian.json's robot_setup[i].robot_id (1..5).
+    robot_names: ['robot1', 'robot2', 'robot3', 'robot4', 'robot5']
+    controller_package_path: '/home/eason/Swarm/gaussian_cluster_transfer_controller'
+    # The policy runs as a subprocess (its selected_model.zip needs numpy>=2,
+    # which conflicts with this machine's system ROS/OpenCV stack in one
+    # interpreter). This package's requirements.txt is byte-identical to
+    # circle_to_ellipse_controller's, so this defaults to reusing that
+    # package's existing .venv instead of creating a second ~5 GB
+    # virtualenv — confirmed working in a hardware-free integration test.
+    # Set to '' to instead use <controller_package_path>/.venv/bin/python
+    # (this package's own venv, if you create one — see
+    # GAUSSIAN_CLUSTER_TRANSFER_EXPERIMENT.md).
+    venv_python: '/home/eason/Swarm/circle_to_ellipse_controller/.venv/bin/python'
+    control_dt: 0.2            # policy decision period [s] (per package README)
+    beta_dt: 0.05              # beta re-evaluation / cmd_vel period [s]
+    max_speed_mps: 0.05        # per-robot |[vx,vy]| clip (package README)
+    episode_decisions: 400     # must match controller.py's EPISODE_DECISIONS
+    subprocess_timeout_s: 1.0  # max wait for one policy response
+    arena_half_width: 1.0      # fixed 2 m x 2 m workspace — sanity-check only
+    autostart: false           # require the ~/start service before moving
+
+gaussian_visualizer:
+  ros__parameters:
+    controller_package_path: '/home/eason/Swarm/gaussian_cluster_transfer_controller'
 
 swarm_mpc_controller:
   ros__parameters:

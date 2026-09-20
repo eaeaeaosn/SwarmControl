@@ -39,6 +39,8 @@ setup(
             'obstacle_visualizer  = swarm_controller.obstacle_visualizer:main',
             'circle_to_ellipse_controller = swarm_controller.circle_to_ellipse_controller:main',
             'ellipse_visualizer   = swarm_controller.ellipse_visualizer:main',
+            'gaussian_cluster_transfer_controller = swarm_controller.gaussian_cluster_transfer_controller:main',
+            'gaussian_visualizer  = swarm_controller.gaussian_visualizer:main',
         ],
     },
 )
